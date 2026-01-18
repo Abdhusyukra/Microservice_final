@@ -17,17 +17,33 @@ spec:
       - name: gateway
         image: perpus/api-gateway:1.0
         imagePullPolicy: IfNotPresent
+        # --- OPTIMASI RAM KUBERNETES ---
+        resources:
+          requests:
+            memory: "256Mi"
+          limits:
+            memory: "384Mi" # Batas maksimal fisik di K8s
         ports:
         - containerPort: 9091
         env:
+        # --- OPTIMASI RAM JAVA (Paling Ampuh) ---
+        # Membatasi Heap ke 256MB dan menggunakan Garbage Collector yang ringan
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx256M -Xms128M -XX:+UseSerialGC -Xss512k"
+        
         - name: LOGSTASH_DESTINATION
           value: "host.docker.internal:5000"
+        
         - name: SPRING_APPLICATION_JSON
           value: >
             {
-              "server": {"port": 9091},
+              "server": {
+                "port": 9091,
+                "tomcat": {"threads": {"max": 20}} 
+              },
               "spring": {
                 "application": {"name": "API-GATEWAY"},
+                "jmx": {"enabled": false},
                 "cloud": {
                   "gateway": {
                     "server": {

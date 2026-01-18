@@ -1,5 +1,5 @@
 # ==========================================================
-# 1. SERVICE BUKU (Port 8081 - NodePort 30081)
+# 1. SERVICE BUKU (Port 8081)
 # ==========================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -20,18 +20,30 @@ spec:
       - name: buku
         image: perpus/buku-service:1.0
         imagePullPolicy: IfNotPresent
+        # --- OPTIMASI RAM KUBERNETES ---
+        resources:
+          requests:
+            memory: "256Mi"
+          limits:
+            memory: "384Mi" # Batas maksimal fisik
         ports:
         - containerPort: 8081
         env:
-        # Alamat Logstash di Docker Compose
+        # --- OPTIMASI RAM JAVA (Paling Ampuh) ---
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx256M -Xms128M -XX:+UseSerialGC -Xss512k"
         - name: LOGSTASH_DESTINATION
           value: "host.docker.internal:5000"
         - name: SPRING_APPLICATION_JSON
           value: >
             {
-              "server": {"port": 8081},
+              "server": {
+                "port": 8081,
+                "tomcat": {"threads": {"max": 10}} 
+              },
               "spring": {
                 "application": {"name": "BUKU"},
+                "jmx": {"enabled": false},
                 "datasource": {
                   "url": "jdbc:mysql://mysql-service:3306/db_buku_command?createDatabaseIfNotExist=true"
                 },
@@ -51,20 +63,11 @@ spec:
               },
               "management": {
                 "endpoints": {"web": {"exposure": {"include": "prometheus,health,info"}}}
-              },
-              "logging": {
-                "level": {
-                  "root": "WARN",
-                  "com.dika": "INFO"
-                }
               }
             }
-        # Mengambil password database dari Secret
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
-            secretKeyRef:
-              name: perpus-secrets
-              key: mysql-root-password
+            secretKeyRef: { name: perpus-secrets, key: mysql-root-password }
 ---
 apiVersion: v1
 kind: Service
@@ -73,16 +76,12 @@ metadata:
   namespace: perpustakaan-ns
 spec:
   type: NodePort
-  ports:
-  - port: 8081
-    targetPort: 8081
-    nodePort: 30081
-  selector:
-    app: buku
+  ports: [{port: 8081, targetPort: 8081, nodePort: 30081}]
+  selector: {app: buku}
 
 ---
 # ==========================================================
-# 2. SERVICE ANGGOTA (Port 8082 - NodePort 30082)
+# 2. SERVICE ANGGOTA (Port 8082)
 # ==========================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -103,17 +102,26 @@ spec:
       - name: anggota
         image: perpus/anggota-service:1.0
         imagePullPolicy: IfNotPresent
+        resources:
+          requests: {memory: "256Mi"}
+          limits: {memory: "384Mi"}
         ports:
         - containerPort: 8082
         env:
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx256M -Xms128M -XX:+UseSerialGC -Xss512k"
         - name: LOGSTASH_DESTINATION
           value: "host.docker.internal:5000"
         - name: SPRING_APPLICATION_JSON
           value: >
             {
-              "server": {"port": 8082},
+              "server": {
+                "port": 8082,
+                "tomcat": {"threads": {"max": 10}}
+              },
               "spring": {
                 "application": {"name": "ANGGOTA"},
+                "jmx": {"enabled": false},
                 "datasource": {
                   "url": "jdbc:mysql://mysql-service:3306/db_anggota_command?createDatabaseIfNotExist=true"
                 },
@@ -130,22 +138,11 @@ spec:
               "eureka": {
                 "client": {"service-url": {"defaultZone": "http://eureka-service:8761/eureka/"}},
                 "instance": {"prefer-ip-address": true}
-              },
-              "management": {
-                "endpoints": {"web": {"exposure": {"include": "prometheus,health,info"}}}
-              },
-              "logging": {
-                "level": {
-                  "root": "WARN",
-                  "com.dika": "INFO"
-                }
               }
             }
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
-            secretKeyRef:
-              name: perpus-secrets
-              key: mysql-root-password
+            secretKeyRef: { name: perpus-secrets, key: mysql-root-password }
 ---
 apiVersion: v1
 kind: Service
@@ -154,16 +151,12 @@ metadata:
   namespace: perpustakaan-ns
 spec:
   type: NodePort
-  ports:
-  - port: 8082
-    targetPort: 8082
-    nodePort: 30082
-  selector:
-    app: anggota
+  ports: [{port: 8082, targetPort: 8082, nodePort: 30082}]
+  selector: {app: anggota}
 
 ---
 # ==========================================================
-# 3. SERVICE PEMINJAMAN (Port 8083 - NodePort 30083)
+# 3. SERVICE PEMINJAMAN (Port 8083)
 # ==========================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -184,17 +177,26 @@ spec:
       - name: peminjaman
         image: perpus/peminjaman-service:1.0
         imagePullPolicy: IfNotPresent
+        resources:
+          requests: {memory: "256Mi"}
+          limits: {memory: "384Mi"}
         ports:
         - containerPort: 8083
         env:
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx256M -Xms128M -XX:+UseSerialGC -Xss512k"
         - name: LOGSTASH_DESTINATION
           value: "host.docker.internal:5000"
         - name: SPRING_APPLICATION_JSON
           value: >
             {
-              "server": {"port": 8083},
+              "server": {
+                "port": 8083,
+                "tomcat": {"threads": {"max": 10}}
+              },
               "spring": {
                 "application": {"name": "PEMINJAMAN"},
+                "jmx": {"enabled": false},
                 "datasource": {
                   "url": "jdbc:mysql://mysql-service:3306/db_peminjaman_command?createDatabaseIfNotExist=true"
                 },
@@ -211,22 +213,11 @@ spec:
               "eureka": {
                 "client": {"service-url": {"defaultZone": "http://eureka-service:8761/eureka/"}},
                 "instance": {"prefer-ip-address": true}
-              },
-              "management": {
-                "endpoints": {"web": {"exposure": {"include": "prometheus,health,info"}}}
-              },
-              "logging": {
-                "level": {
-                  "root": "WARN",
-                  "com.dika": "INFO"
-                }
               }
             }
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
-            secretKeyRef:
-              name: perpus-secrets
-              key: mysql-root-password
+            secretKeyRef: { name: perpus-secrets, key: mysql-root-password }
 ---
 apiVersion: v1
 kind: Service
@@ -235,16 +226,12 @@ metadata:
   namespace: perpustakaan-ns
 spec:
   type: NodePort
-  ports:
-  - port: 8083
-    targetPort: 8083
-    nodePort: 30083
-  selector:
-    app: peminjaman
+  ports: [{port: 8083, targetPort: 8083, nodePort: 30083}]
+  selector: {app: peminjaman}
 
 ---
 # ==========================================================
-# 4. SERVICE PENGEMBALIAN (Port 8084 - NodePort 30084)
+# 4. SERVICE PENGEMBALIAN (Port 8084)
 # ==========================================================
 apiVersion: apps/v1
 kind: Deployment
@@ -265,10 +252,14 @@ spec:
       - name: pengembalian
         image: perpus/pengembalian-service:1.0
         imagePullPolicy: IfNotPresent
+        resources:
+          requests: {memory: "256Mi"}
+          limits: {memory: "384Mi"}
         ports:
         - containerPort: 8084
         env:
-        # URL Internal K8s untuk VO antar service
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xmx256M -Xms128M -XX:+UseSerialGC -Xss512k"
         - name: SERVICE_PEMINJAMAN_URL
           value: "http://peminjaman-service:8083"
         - name: SERVICE_ANGGOTA_URL
@@ -280,9 +271,13 @@ spec:
         - name: SPRING_APPLICATION_JSON
           value: >
             {
-              "server": {"port": 8084},
+              "server": {
+                "port": 8084,
+                "tomcat": {"threads": {"max": 10}}
+              },
               "spring": {
                 "application": {"name": "PENGEMBALIAN"},
+                "jmx": {"enabled": false},
                 "datasource": {
                   "url": "jdbc:mysql://mysql-service:3306/db_pengembalian_command?createDatabaseIfNotExist=true"
                 },
@@ -299,22 +294,11 @@ spec:
               "eureka": {
                 "client": {"service-url": {"defaultZone": "http://eureka-service:8761/eureka/"}},
                 "instance": {"prefer-ip-address": true}
-              },
-              "management": {
-                "endpoints": {"web": {"exposure": {"include": "prometheus,health,info"}}}
-              },
-              "logging": {
-                "level": {
-                  "root": "WARN",
-                  "com.dika": "INFO"
-                }
               }
             }
         - name: SPRING_DATASOURCE_PASSWORD
           valueFrom:
-            secretKeyRef:
-              name: perpus-secrets
-              key: mysql-root-password
+            secretKeyRef: { name: perpus-secrets, key: mysql-root-password }
 ---
 apiVersion: v1
 kind: Service
@@ -323,9 +307,5 @@ metadata:
   namespace: perpustakaan-ns
 spec:
   type: NodePort
-  ports:
-  - port: 8084
-    targetPort: 8084
-    nodePort: 30084
-  selector:
-    app: pengembalian
+  ports: [{port: 8084, targetPort: 8084, nodePort: 30084}]
+  selector: {app: pengembalian}
