@@ -1,7 +1,7 @@
 # Laporan UAS Arsitektur Berbasis Layanan
 ## Implementasi Arsitektur Microservices Modern dengan CQRS Hybrid, Event-Driven Architecture, dan Automated Deployment
 
-**Nama** : Muhammad Abdhu Syukra
+**Nama** : Muhammad Abdhu Syukra  
 **Kelas** : TRPL 3D  
 **Mata Kuliah** : Arsitektur Berbasis Layanan  
 
